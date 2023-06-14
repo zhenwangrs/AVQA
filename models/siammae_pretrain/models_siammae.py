@@ -1,15 +1,20 @@
 import torch
 import torch.nn as nn
-import pathlib
+
+import platform
+
+plat = platform.system().lower()
+
+if plat == 'windows':
+    import pathlib
+    temp = pathlib.PosixPath
+    pathlib.PosixPath = pathlib.WindowsPath
 
 from transformers import ViTMAEModel, AutoImageProcessor
 
 from model_vit_crossmae import ViTMAEForPreTraining
 import models_audio_crossmae
 from utils import load_encoder_from_pretained_audiomae, load_decoder_from_pretrained_vitmae
-
-temp = pathlib.PosixPath
-pathlib.PosixPath = pathlib.WindowsPath
 
 
 class SiamMAE(nn.Module):

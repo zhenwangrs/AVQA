@@ -3,16 +3,20 @@ from open_clip import ClipLoss
 
 import torch
 import torch.nn as nn
-import pathlib
+import platform
+
+plat = platform.system().lower()
+
+if plat == 'windows':
+    import pathlib
+    temp = pathlib.PosixPath
+    pathlib.PosixPath = pathlib.WindowsPath
 
 from transformers import ViTMAEModel, AutoImageProcessor, CLIPVisionModel, AutoProcessor
 
 from models.siammae_pretrain.model_vit_crossmae import ViTMAEForPreTraining
 from models.siammae_pretrain import models_audio_crossmae
 from models.siammae_pretrain.utils import load_encoder_from_pretained_audiomae, load_decoder_from_pretrained_vitmae
-
-temp = pathlib.PosixPath
-pathlib.PosixPath = pathlib.WindowsPath
 
 
 class SiamMAE(nn.Module):
@@ -57,10 +61,13 @@ class SiamMAE(nn.Module):
     def forward(self, audio_feats, frame1_feats, frame2_feats, frame1_clip_feats):
         frame1_encoder_feat = self.image_mae_encoder(frame1_feats, apply_mask=False).last_hidden_state
         frame1_decoder_feat = self.image_mae_decoder_embed(frame1_encoder_feat)
-        frame2_decoder_output = self.image_mae_for_pretraining(frame2_feats, frame1_decoder_feat, frame1_decoder_feat, return_dict=True)
+        frame2_decoder_output = self.image_mae_for_pretraining(frame2_feats, frame1_decoder_feat, frame1_decoder_feat,
+                                                               return_dict=True)
         frame2_decoder_feat = frame2_decoder_output.decoder_last_hidden_state
         loss_frame2_recon = frame2_decoder_output.loss
-        loss_audio_recon, pred, audio_encoder_feat, audio_decoder_last_hidden_state = self.audio_mae(audio_feats, frame2_decoder_feat, frame2_decoder_feat)
+        loss_audio_recon, pred, audio_encoder_feat, audio_decoder_last_hidden_state = self.audio_mae(audio_feats,
+                                                                                                     frame2_decoder_feat,
+                                                                                                     frame2_decoder_feat)
 
         frame1_clip_feats = self.clip(frame1_clip_feats).last_hidden_state
         frame1_clip_feats_mean = torch.mean(frame1_clip_feats, dim=1)
