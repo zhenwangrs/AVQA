@@ -1,0 +1,59 @@
+dataset:
+  data_json_path: 'D:/dataset/data_pretrain/av_1fps.json'
+  data_dir: 'D:/dataset/data_pretrain/av_1fps/'
+
+  finetune_json_path: 'D:/dataset/data_pretrain/av_finetune.json'
+  av_data_path: 'D:/dataset/data_pretrain/av_1fps'
+  original_pt_dir: 'D:/dataset/data_pretrain/av_pt'
+  finetune_pt_dir: 'D:/dataset/data_pretrain/av_finetune'
+  finetune_mavqa_json_path: 'D:/dataset/data_pretrain/qa/avqa-{}.json'
+
+  target_length: 128
+  num_mel_bins: 128
+  use_fbank: False
+  fbank_dir: ''
+  freqm: 0
+  timem: 0
+  norm_mean: -4.2677393
+  norm_std: 4.5689974
+  roll_mag_aug: False
+
+model:
+  model_name: 'mae_vit_base_patch16'
+  audiomae_pretrained_pth_path: 'E:/Research/AVQA/lib/pretrained.pth'
+  mask_ratio: 0.8
+  norm_pix_loss: False # Use (per-patch) normalized pixels as targets for computing loss
+  in_channels: 1
+  audio_exp: True
+  alpha: 0 # contrastive loss weight
+  omega: 1 # reconstruction loss weight
+  mode: 0 # contrastive mode
+  decoder_mode: 0 # decoder mode 0: global attn 1: swined local attn
+  use_custom_patch: False # use custom patch and override timm PatchEmbed
+  split_pos: False # use splitted pos emb
+  pos_trainable: False
+  use_nce: False
+  load_video: False
+  mask_2d: False # use 2d masking
+  mask_t_prob: 0.7 # ratio of masking time
+  mask_f_prob: 0.3 # ratio of masking frequency
+  no_shift: False
+  select_num: 30
+  answer_types: 42
+
+train:
+  device: 'cuda'
+  batch_accum: 8
+  batch_size: 4
+  num_workers: 4
+  pin_memory: True
+
+  start_epoch: 1
+  epochs: 20
+  test_freq: 1 # test how many epoch
+  save_freq: 1
+  log_freq: 20 # log how many loss per epoch
+  lr: 0.00005
+  world_size: 1
+  local_rank: -1
+

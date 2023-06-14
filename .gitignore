@@ -1,0 +1,13 @@
+.idea
+/data/
+/lib/
+*.pth
+*.ply
+*.obj
+*.png
+*.log
+*.whl
+*.zip
+*.pyc
+*.csv
+*.json
