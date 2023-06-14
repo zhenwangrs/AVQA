@@ -19,7 +19,7 @@ class MavqaDataset_online_test(Dataset):
         self.start_frame = start_frame
         self.qa_json_path = self.config.dataset.finetune_mavqa_json_path.format(mode)
         self.qa_data = json.load(open(self.qa_json_path, 'r', encoding='utf-8'))
-        self.av_data = self.load_av_data(self.config.dataset.finetune_json_path)
+        self.av_data = json.load(open(self.config.dataset.av_list_json_path, 'r', encoding='utf-8'))
         self.ans_set =  ['yes', 'no',
                          'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'more than ten',
                          'left', 'middle', 'right', 'simultaneously',
@@ -28,13 +28,6 @@ class MavqaDataset_online_test(Dataset):
                          'electric_bass', 'flute', 'trumpet', 'erhu', 'xylophone', 'tuba', 'suona']
         self.av2pt = AV2PT(config, image_processor)
 
-    def load_av_data(self, av_data_path):
-        av_data_list = json.load(open(av_data_path, 'r', encoding='utf-8'))
-        av_data_dict = {}
-        for data in av_data_list:
-            av_data_dict[data['video_id']] = data
-        return av_data_dict
-
     def get_av_data(self, video_id):
         av_data = self.av_data[video_id]
         audio_data = av_data['audio']
@@ -42,8 +35,8 @@ class MavqaDataset_online_test(Dataset):
         # 每隔N帧采样一帧
         rand_range = 60 // self.config.model.select_num
         selected_frame_index = [self.start_frame + rand_range * i for i in range(self.config.model.select_num)]
-        audio_list = [audio_data[index-1] for index in selected_frame_index]
-        frame_list = [frame_data[index-1] for index in selected_frame_index]
+        audio_list = [os.path.join(self.config.av_data_path, audio_data[index - 1]) for index in selected_frame_index]
+        frame_list = [os.path.join(self.config.av_data_path, frame_data[index - 1]) for index in selected_frame_index]
         return audio_list, frame_list
 
     def compose_question(self, sentence, words):

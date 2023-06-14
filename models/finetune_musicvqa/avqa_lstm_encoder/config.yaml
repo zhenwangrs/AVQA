@@ -2,7 +2,7 @@ dataset:
   data_json_path: 'D:/dataset/data_pretrain/av_1fps.json'
   data_dir: 'D:/dataset/data_pretrain/av_1fps/'
 
-  finetune_json_path: 'D:/dataset/data_pretrain/av_finetune.json'
+  av_list_json_path: 'D:/dataset/data_pretrain/av_list.json'
   av_data_path: 'D:/dataset/data_pretrain/av_1fps'
   original_pt_dir: 'D:/dataset/data_pretrain/av_pt'
   finetune_pt_dir: 'D:/dataset/data_pretrain/av_finetune'

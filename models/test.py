@@ -1,28 +1,12 @@
-import open_clip
-import requests
-import torch
-from PIL import Image
-from transformers import AutoTokenizer
-from open_clip import tokenizer
+import json
 
-url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-
-
-model, _, preprocess = open_clip.create_model_and_transforms('coca_ViT-B-32', pretrained='laion2b_s13b_b90k')
-state_dict = model.state_dict()
-# tokenizer = open_clip.get_tokenizer('coca_ViT-B-32-laion2B-s13B-b90k')
-# clip_tokenizer = AutoTokenizer.from_pretrained("openai/clip-vit-base-patch32")
-
-text = tokenizer.tokenize(["a diagram", "a dog", "a big cat"])
-image = preprocess(Image.open(requests.get(url, stream=True).raw)).unsqueeze(0)
-# text2 = clip_tokenizer(["a diagram", "a dog", "a big cat"])
-
-with torch.no_grad(), torch.cuda.amp.autocast():
-    text_features, text_embeds = model._encode_text(text)
-    image_features = model.encode_image(image)
-    image_features /= image_features.norm(dim=-1, keepdim=True)
-    text_features /= text_features.norm(dim=-1, keepdim=True)
-
-    text_probs = (100.0 * image_features @ text_features.T).softmax(dim=-1)
-
-print("Label probs:", text_probs)  # prints: [[1., 0., 0.]]
+j = json.load(open('D:\dataset\data_pretrain/av_finetune.json', 'r', encoding='utf-8'))
+new_j = {}
+for item in j:
+    video_id = item['video_id']
+    audios = item['audio']
+    frames = item['frame']
+    audios = [audio.replace('D:\\dataset\\data_pretrain/av_1fps/', '').replace('\\', '/') for audio in audios]
+    frames = [frame.replace('D:\\dataset\\data_pretrain/av_1fps/', '').replace('\\', '/') for frame in frames]
+    new_j[video_id] = {'audio': audios, 'frame': frames}
+json.dump(new_j, open('D:\dataset\data_pretrain/av_finetune_new.json', 'w', encoding='utf-8'), indent=4, ensure_ascii=False)

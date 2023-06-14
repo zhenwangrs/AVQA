@@ -92,7 +92,7 @@ class LSTM_AVQA_Model(nn.Module):
         self.lstm_text_audio = CMA_LSTM(num_layers=self.config.model.lstm_layers, hidden_size=self.hidden_size)
         self.lstm_text_frame = CMA_LSTM(num_layers=self.config.model.lstm_layers, hidden_size=self.hidden_size)
         self.lstm_text_av = CMA_LSTM(num_layers=self.config.model.lstm_layers, hidden_size=self.hidden_size)
-        self.classifier = nn.Linear(self.hidden_size * 2, 42)
+        self.classifier = nn.Linear(self.hidden_size * 3, 42)
 
         self.tokenizer = AutoTokenizer.from_pretrained("openai/clip-vit-base-patch16")
         self.image_processor = AutoImageProcessor.from_pretrained("facebook/vit-mae-base")
