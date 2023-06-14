@@ -62,4 +62,4 @@ distributed:
   local_rank: -1
   world_size: 1
   init_method: "tcp://127.0.0.1:23333"
-  backend: "gloo"
+  backend: "nccl"
