@@ -112,9 +112,9 @@ class MusicavqaDataset(Dataset):
         datum = self.data[index]
 
         if not self.use_fbank:
-            fbank = self._wav2fbank(datum['wav'])
+            fbank = self._wav2fbank(os.path.join(self.config.dataset.data_dir, datum['wav']))
         else:
-            fbank = self._fbank(datum['wav'])
+            fbank = self._fbank(os.path.join(self.config.dataset.data_dir, datum['wav']))
         # SpecAug for training (not for eval)
         freqm = torchaudio.transforms.FrequencyMasking(self.freqm)
         timem = torchaudio.transforms.TimeMasking(self.timem)
@@ -132,8 +132,8 @@ class MusicavqaDataset(Dataset):
     def collate_fn(self, batch):
         audio, frame1_paths, frame2_paths = zip(*batch)
         audio_feat = torch.cat(audio, dim=0)
-        frame1s = [Image.open(image_path) for image_path in frame1_paths]
-        frame2s = [Image.open(image_path) for image_path in frame2_paths]
+        frame1s = [Image.open(os.path.join(self.config.dataset.data_dir, image_path)) for image_path in frame1_paths]
+        frame2s = [Image.open(os.path.join(self.config.dataset.data_dir, image_path)) for image_path in frame2_paths]
         frame1_feats = self.image_processor(images=frame1s, return_tensors="pt").pixel_values
         frame2_feats = self.image_processor(images=frame2s, return_tensors="pt").pixel_values
         return audio_feat, frame1_feats, frame2_feats
