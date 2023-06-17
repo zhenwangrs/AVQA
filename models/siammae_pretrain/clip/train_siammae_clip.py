@@ -28,7 +28,7 @@ def train(config):
         prefetch_factor=2,
         pin_memory=True,
         persistent_workers=True,
-        drop_last=True,
+        drop_last=False,
         collate_fn=dataset.collate_fn
     )
 
@@ -60,7 +60,7 @@ def train(config):
                 logger.info(f'epoch: {epoch}, batch: {index}, total loss: {total_loss.item()}, '
                             f'frame2 recon loss: {loss_frame2_recon.item()}, '
                             f'audio recon loss: {loss_audio_recon.item()}, '
-                            f'clip loss frame: {clip_loss_audio.item()}, '
+                            f'clip loss frame: {clip_loss_frame.item()}, '
                             f'clip loss audio: {clip_loss_audio.item()}')
         scheduler.step()
         logger.info(f'epoch: {epoch}, epoch_loss: {epoch_loss / len(pretrain_dataloader)}')
@@ -78,4 +78,6 @@ if __name__ == '__main__':
 
     config = yaml.load(open('config.yaml', 'r', encoding='utf-8'), Loader=yaml.FullLoader)
     config = munch.munchify(config)
+
+    logger.info(config)
     train(config)

@@ -80,7 +80,7 @@ class MusicavqaDataset(Dataset):
     def _wav2fbank(self, filename):
         waveform, sr = torchaudio.load(filename)
         waveform = waveform - waveform.mean()
-        # 498 128, 998, 128
+        # 128 128, 498 128, 998, 128
         fbank = torchaudio.compliance.kaldi.fbank(
             waveform, htk_compat=True, sample_frequency=sr, use_energy=False,
             window_type='hanning', num_mel_bins=self.melbins, dither=0.0,

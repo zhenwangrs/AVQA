@@ -12,7 +12,7 @@ if plat == 'windows':
     temp = pathlib.PosixPath
     pathlib.PosixPath = pathlib.WindowsPath
 
-from transformers import ViTMAEModel, AutoImageProcessor, CLIPVisionModel, AutoProcessor
+from transformers import ViTMAEModel, AutoImageProcessor, CLIPVisionModel, AutoProcessor, CLIPModel
 
 from models.siammae_pretrain.model_vit_crossmae import ViTMAEForPreTraining
 from models.siammae_pretrain import models_audio_crossmae
@@ -41,56 +41,53 @@ class SiamMAE(nn.Module):
         )
         self.audio_mae = load_encoder_from_pretained_audiomae(self.audio_mae, config.model.audiomae_pretrained_pth_path)
         self.audio_mae = load_decoder_from_pretrained_vitmae(self.audio_mae)
+        self.audio_mae_proj = nn.Linear(768, 512)
 
         self.image_processor = AutoImageProcessor.from_pretrained("facebook/vit-mae-base")
         self.image_mae_for_pretraining = ViTMAEForPreTraining.from_pretrained("facebook/vit-mae-base")
         self.image_mae_encoder = self.image_mae_for_pretraining.vit
         self.image_mae_decoder_embed = self.image_mae_for_pretraining.decoder.decoder_embed
+        self.image_mae_proj = nn.Linear(768, 512)
 
-        self.clip = CLIPVisionModel.from_pretrained("openai/clip-vit-base-patch16")
-        self.clip_image_processor = AutoProcessor.from_pretrained("openai/clip-vit-base-patch16")
-        # self.clip, _, self.clip_image_processor = open_clip.create_model_and_transforms('coca_ViT-B-32', pretrained='laion2b_s13b_b90k')
-        # self.clip_linear = nn.Linear(512, 768)
+        self.clip = CLIPModel.from_pretrained("openai/clip-vit-base-patch16")
+        self.clip_visual = self.clip.vision_model
+        self.clip_visual_proj = self.clip.visual_projection
+        self.clip_text_proj = self.clip.text_projection
         # 冻结clip的参数
         for param in self.clip.parameters():
             param.requires_grad = False
 
         self.clip_loss_fn = ClipLoss()
+        self.clip_image_processor = AutoProcessor.from_pretrained("openai/clip-vit-base-patch16")
         self.logit_scale = torch.nn.Parameter(torch.tensor(2.6592), requires_grad=True)
 
     def forward(self, audio_feats, frame1_feats, frame2_feats, frame1_clip_feats):
         frame1_encoder_feat = self.image_mae_encoder(frame1_feats, apply_mask=False).last_hidden_state
         frame1_decoder_feat = self.image_mae_decoder_embed(frame1_encoder_feat)
-        frame2_decoder_output = self.image_mae_for_pretraining(frame2_feats, frame1_decoder_feat, frame1_decoder_feat,
-                                                               return_dict=True)
+
+        frame2_decoder_output = self.image_mae_for_pretraining(
+            frame2_feats, frame1_decoder_feat, frame1_decoder_feat, return_dict=True)
         frame2_decoder_feat = frame2_decoder_output.decoder_last_hidden_state
         loss_frame2_recon = frame2_decoder_output.loss
-        loss_audio_recon, pred, audio_encoder_feat, audio_decoder_last_hidden_state = self.audio_mae(audio_feats,
-                                                                                                     frame2_decoder_feat,
-                                                                                                     frame2_decoder_feat)
 
-        frame1_clip_feats = self.clip(frame1_clip_feats).last_hidden_state
+        loss_audio_recon, pred, audio_encoder_feat, audio_decoder_last_hidden_state = \
+            self.audio_mae(audio_feats, frame2_decoder_feat, frame2_decoder_feat)
+
+        frame1_clip_feats = self.clip_visual(frame1_clip_feats).last_hidden_state
+        frame1_clip_feats = self.clip_visual_proj(frame1_clip_feats)
         frame1_clip_feats_mean = torch.mean(frame1_clip_feats, dim=1)
         frame1_clip_feats_mean = frame1_clip_feats_mean / frame1_clip_feats_mean.norm(dim=-1, keepdim=True)
 
+        frame1_encoder_feat = self.image_mae_proj(frame1_encoder_feat)
         frame1_encoder_feat_mean = torch.mean(frame1_encoder_feat, dim=1)
         frame1_encoder_feat_mean = frame1_encoder_feat_mean / frame1_encoder_feat_mean.norm(dim=-1, keepdim=True)
         clip_loss_frame = self.clip_loss_fn(frame1_encoder_feat_mean, frame1_clip_feats_mean, self.logit_scale.exp())
 
         audio_no_mask_feats = self.audio_mae.forward_encoder_no_mask(audio_feats)
+        audio_no_mask_feats = self.audio_mae_proj(audio_no_mask_feats)
         audio_encoder_feat_mean = torch.mean(audio_no_mask_feats, dim=1)
         audio_encoder_feat_mean = audio_encoder_feat_mean / audio_encoder_feat_mean.norm(dim=-1, keepdim=True)
         clip_loss_audio = self.clip_loss_fn(audio_encoder_feat_mean, frame1_clip_feats_mean, self.logit_scale.exp())
-
-        # frame2_clip_feats_mean = self.clip.encode_image(frame2_clip_feats)
-        #
-        # frame2_decoder_feat_mean = torch.mean(frame2_decoder_feat, dim=1)
-        # frame2_decoder_feat_mean = frame2_decoder_feat_mean / frame2_decoder_feat_mean.norm(dim=-1, keepdim=True)
-        # clip_loss_frame = self.clip_loss_fn(frame2_decoder_feat_mean, frame2_clip_feats_mean, self.logit_scale.exp())
-        #
-        # audio_decoder_feat_mean = torch.mean(audio_decoder_last_hidden_state, dim=1)
-        # audio_decoder_feat_mean = audio_decoder_feat_mean / audio_decoder_feat_mean.norm(dim=-1, keepdim=True)
-        # clip_loss_audio = self.clip_loss_fn(audio_decoder_feat_mean, frame2_clip_feats_mean, self.logit_scale.exp())
 
         total_loss = loss_frame2_recon + loss_audio_recon + clip_loss_frame + clip_loss_audio
         return total_loss, loss_frame2_recon, loss_audio_recon, clip_loss_frame, clip_loss_audio

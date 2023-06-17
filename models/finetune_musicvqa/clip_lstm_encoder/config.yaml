@@ -2,9 +2,10 @@ dataset:
   data_json_path: 'D:/dataset/data_pretrain/av_1fps.json'
   data_dir: 'D:/dataset/data_pretrain/av_1fps/'
 
-  finetune_json_path: 'D:/dataset/data_pretrain/av_finetune.json'
+  av_list_json_path: 'D:/dataset/data_pretrain/av_list.json'
+  av_data_path: 'D:/dataset/data_pretrain/av_1fps'
+  original_pt_dir: 'D:/dataset/data_pretrain/av_pt'
   finetune_pt_dir: 'D:/dataset/data_pretrain/av_finetune'
-#  finetune_pt_dir: 'F:/Research/AVQA/music_avqa/data_finetune'
   finetune_mavqa_json_path: 'D:/dataset/data_pretrain/qa/avqa-{}.json'
 
   target_length: 96
@@ -20,6 +21,8 @@ dataset:
 model:
   model_name: 'mae_vit_base_patch16'
   audiomae_pretrained_pth_path: 'E:/Research/AVQA/lib/pretrained.pth'
+  pretrained_siammae_path: 'E:/Research/AVQA/models/siammae_pretrain/clip/ckp/model_1.pth'
+  
   mask_ratio: 0.9
   norm_pix_loss: False # Use (per-patch) normalized pixels as targets for computing loss
   in_channels: 1
@@ -37,8 +40,17 @@ model:
   mask_t_prob: 0.7 # ratio of masking time
   mask_f_prob: 0.3 # ratio of masking frequency
   no_shift: False
-
+  select_num: 10
   answer_types: 42
+  lstm_layers: 4
+
+  finetune:
+    image_mae: False
+    image_mae_proj: True
+    audio_mae: False
+    audio_mae_proj: True
+    clip_text: False
+    clip_text_proj: True
 
 train:
   device: 'cuda'
@@ -48,10 +60,16 @@ train:
   pin_memory: True
 
   start_epoch: 1
-  epochs: 5
-  save_freq: 1
-  log_freq: 20 # log how many loss per epoch
-  lr: 0.00005
-  world_size: 1
-  local_rank: -1
+  epochs: 30
+  test_freq: 2 # test how many epoch
+  save_freq: 2
+  log_freq: 30 # log how many loss per epoch
+  lr: 0.0001
 
+distributed:
+  dist: True
+  rank: 0
+  local_rank: -1
+  world_size: 1
+  init_method: "tcp://127.0.0.1:23333"
+  backend: "gloo"
