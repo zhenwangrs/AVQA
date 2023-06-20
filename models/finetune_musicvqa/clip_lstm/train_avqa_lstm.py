@@ -17,7 +17,7 @@ from dataset_avqa_lstm import MavqaDataset_online
 from dataset_avqa_lstm_test import MavqaDataset_online_test
 from models_lstm import LSTM_AVQA_Model
 
-warnings.filterwarnings("ignore")
+warnings.filterwarnings('ignore')
 
 
 # torch.set_float32_matmul_precision('high')
@@ -25,7 +25,7 @@ warnings.filterwarnings("ignore")
 def train():
     logger.info(config)
 
-    model = LSTM_AVQA_Model(config).cuda()
+    model = LSTM_AVQA_Model(config).to(config.train.device)
     torch.save(model.state_dict(), f'./ckp/model_0.pth')
     total_params = sum(p.numel() for p in model.parameters())
     print(f"Total parameters: {total_params}")
@@ -42,7 +42,7 @@ def train():
     for i in range(start_epoch - 1):
         scheduler.step()
 
-    if config.train.trining_mode:
+    if config.train.training_mode:
         train_dataset = MavqaDataset_online(config, model.tokenizer, model.image_processor, 'train')
         train_loader = DataLoader(train_dataset,
                                   batch_size=config.train.batch_size,
@@ -60,11 +60,11 @@ def train():
             for index, (text_input_ids, text_attention_mask, audio_feats, frame_feats,
                         labels, question_types, question_ids) in enumerate(
                 tqdm(train_loader), start=1):
-                text_input_ids = text_input_ids.cuda()
-                text_attention_mask = text_attention_mask.cuda()
-                audio_feats = audio_feats.cuda()
-                frame_feats = frame_feats.cuda()
-                labels = labels.cuda()
+                text_input_ids = text_input_ids.to(config.train.device)
+                text_attention_mask = text_attention_mask.to(config.train.device)
+                audio_feats = audio_feats.to(config.train.device)
+                frame_feats = frame_feats.to(config.train.device)
+                labels = labels.to(config.train.device)
                 with autocast():
                     loss, logits = model(text_input_ids, text_attention_mask, labels,
                                          audio_feats, frame_feats)
@@ -76,7 +76,8 @@ def train():
                     scaler.update()
                     optim.zero_grad()
                 if index % log_freq == 0:
-                    logger.info(f'epoch: {epoch}, batch: {index}, loss: {loss.item()}, epoch_loss: {epoch_loss / index}')
+                    logger.info(
+                        f'epoch: {epoch}, batch: {index}, loss: {loss.item()}, epoch_loss: {epoch_loss / index}')
                 torch.cuda.empty_cache()
             logger.info(f'epoch loss: {epoch_loss / index}')
             if epoch % config.train.save_freq == 0 and epoch >= config.train.start_test_epoch:
@@ -110,11 +111,11 @@ def test(model, config, split='test'):
         for index, (text_input_ids, text_attention_mask, audio_feats, frame_feats,
                     labels, question_types, question_ids) in enumerate(
             tqdm(test_loader), start=1):
-            text_input_ids = text_input_ids.cuda()
-            text_attention_mask = text_attention_mask.cuda()
-            audio_feats = audio_feats.cuda()
-            frame_feats = frame_feats.cuda()
-            labels = labels.cuda()
+            text_input_ids = text_input_ids.to(config.train.device)
+            text_attention_mask = text_attention_mask.to(config.train.device)
+            audio_feats = audio_feats.to(config.train.device)
+            frame_feats = frame_feats.to(config.train.device)
+            labels = labels.to(config.train.device)
             logits = model.predict(text_input_ids, text_attention_mask, labels,
                                    audio_feats, frame_feats)
             pred_score_list = torch.softmax(logits, dim=-1).cpu().tolist()
@@ -158,11 +159,11 @@ def test_all(model, config, split='test'):
             for index, (text_input_ids, text_attention_mask, audio_feats, frame_feats,
                         labels, question_types, question_ids) in enumerate(
                 tqdm(test_loader), start=1):
-                text_input_ids = text_input_ids.cuda()
-                text_attention_mask = text_attention_mask.cuda()
-                audio_feats = audio_feats.cuda()
-                frame_feats = frame_feats.cuda()
-                labels = labels.cuda()
+                text_input_ids = text_input_ids.to(config.train.device)
+                text_attention_mask = text_attention_mask.to(config.train.device)
+                audio_feats = audio_feats.to(config.train.device)
+                frame_feats = frame_feats.to(config.train.device)
+                labels = labels.to(config.train.device)
                 logits = model.predict(text_input_ids, text_attention_mask, labels,
                                        audio_feats, frame_feats)
                 pred_score_list = torch.softmax(logits, dim=-1).cpu().tolist()
@@ -203,4 +204,6 @@ if __name__ == '__main__':
     config = yaml.load(open('config.yaml', 'r', encoding='utf-8'),
                        Loader=yaml.FullLoader)
     config = munch.munchify(config)
+
+    os.environ['CUDA_VISIBLE_DEVICES'] = config.train.visible_gpu
     train()
