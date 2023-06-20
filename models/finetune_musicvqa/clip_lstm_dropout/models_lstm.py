@@ -144,7 +144,8 @@ class LSTM_AVQA_Model(nn.Module):
         B, S, H = frame_feats.shape
         frame_feats = frame_feats.reshape(FB, FN, S, H)  # [4, 10, 197, 512]
 
-        av_feats = self.av_fusion(audio_feats, frame_feats)
+        # av_feats = self.av_fusion(audio_feats, frame_feats)
+        av_feats = self.av_fusion(frame_feats, audio_feats)
 
         text_feats = self.clip_text(input_ids=text_input_ids, attention_mask=text_attention_mask).last_hidden_state
         text_feats = self.clip_text_proj(text_feats)
