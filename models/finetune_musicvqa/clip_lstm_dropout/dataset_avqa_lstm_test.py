@@ -36,8 +36,6 @@ class MavqaDataset_online_test(Dataset):
         # 每隔N帧采样一帧
         rand_range = 60 // self.config.model.select_num
         selected_frame_index = [self.start_frame + rand_range * i for i in range(self.config.model.select_num)]
-        if self.config.model.fix_select:
-            selected_frame_index = self.selected_frame_index
         audio_list = [os.path.join(self.config.dataset.av_data_path, audio_data[index - 1]) for index in selected_frame_index]
         frame_list = [os.path.join(self.config.dataset.av_data_path, frame_data[index - 1]) for index in selected_frame_index]
         return audio_list, frame_list

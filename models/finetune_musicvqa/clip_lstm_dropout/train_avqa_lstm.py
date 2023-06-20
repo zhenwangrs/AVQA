@@ -42,8 +42,8 @@ def train():
     for i in range(start_epoch - 1):
         scheduler.step()
 
-    if config.train.epochs > 0:
-        train_dataset = MavqaDataset_online(config, model.tokenizer, model.image_processor, 'train', fix_select=False)
+    if config.train.trining_mode:
+        train_dataset = MavqaDataset_online(config, model.tokenizer, model.image_processor, 'train')
         train_loader = DataLoader(train_dataset,
                                   batch_size=config.train.batch_size,
                                   shuffle=True,
@@ -69,8 +69,8 @@ def train():
                     loss, logits = model(text_input_ids, text_attention_mask, labels,
                                          audio_feats, frame_feats)
                 scaler.scale(loss).backward()
-                print(f'epoch: {epoch}, batch: {index}, loss: {loss.item()}, epoch_loss: {epoch_loss / index}')
                 epoch_loss += loss.item()
+                print(f'epoch: {epoch}, batch: {index}, loss: {loss.item()}, epoch_loss: {epoch_loss / index}')
                 if index % config.train.batch_accum == 0:
                     scaler.step(optim)
                     scaler.update()
@@ -87,16 +87,15 @@ def train():
             scheduler.step()
 
     logger.info('testing ...')
-    # model.load_state_dict(torch.load(f'./ckp/model_{config.train.epochs}.pth'))
-    model.load_state_dict(torch.load(f'./ckp/model_12.pth'))
-    # test(model, config, split='val')
-    test_all(model, config, split='test')
+    model.load_state_dict(torch.load(f'./ckp/model_{config.train.test_epoch}.pth'))
+    test(model, config, split='test')
+    # test_all(model, config, split='test')
 
 
 def test(model, config, split='test'):
     model.eval()
 
-    test_dataset = MavqaDataset_online(config, model.tokenizer, model.image_processor, split, fix_select=False)
+    test_dataset = MavqaDataset_online(config, model.tokenizer, model.image_processor, split)
     test_loader = DataLoader(test_dataset,
                              batch_size=50,
                              shuffle=False,

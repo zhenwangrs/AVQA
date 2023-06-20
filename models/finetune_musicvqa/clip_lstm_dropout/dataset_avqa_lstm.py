@@ -12,12 +12,11 @@ from models.finetune_musicvqa.utils_finetune import AV2PT
 
 
 class MavqaDataset_online(Dataset):
-    def __init__(self, config, tokenizer, image_processor, mode='train', fix_select=False):
+    def __init__(self, config, tokenizer, image_processor, mode='train'):
         self.config = config
         self.tokenizer = tokenizer
         self.image_processor = image_processor
         self.mode = mode
-        self.fix_select = fix_select
         self.qa_json_path = self.config.dataset.finetune_mavqa_json_path.format(mode)
         self.qa_data = json.load(open(self.qa_json_path, 'r', encoding='utf-8'))
         self.av_data = json.load(open(self.config.dataset.av_list_json_path, 'r', encoding='utf-8'))
@@ -36,7 +35,7 @@ class MavqaDataset_online(Dataset):
         frame_data = av_data['frame']
         # 每隔N帧采样一帧
         rand_range = 60 // self.config.model.select_num
-        start_frame = random.randint(1, rand_range) if not self.fix_select else rand_range
+        start_frame = random.randint(1, rand_range) if not self.config.model.fix_select else rand_range
         selected_frame_index = [start_frame + rand_range * i for i in range(self.config.model.select_num)]
         if self.config.model.fix_select:
             selected_frame_index = self.selected_frame_index
