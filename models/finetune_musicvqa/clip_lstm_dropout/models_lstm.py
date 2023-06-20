@@ -11,9 +11,16 @@ from models.siammae_pretrain.clip.models_siammae_clip import SiamMAE
 
 
 class PairwiseCrossAttention(nn.Module):
-    def __init__(self, input_dim, dropout=0.1):
+    def __init__(self, hidden_size, dropout=0.0):
         super(PairwiseCrossAttention, self).__init__()
-        self.cma = nn.MultiheadAttention(input_dim, 8, batch_first=True, dropout=dropout)
+        self.cma = nn.MultiheadAttention(hidden_size, 8, batch_first=True, dropout=dropout)
+        self.layer_norm1 = nn.LayerNorm(hidden_size)
+        self.FFN = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size * 4),
+            nn.ReLU(),
+            nn.Linear(hidden_size * 4, hidden_size)
+        )
+        self.layer_norm2 = nn.LayerNorm(hidden_size)
 
     def forward(self, audio_feature, vision_feature):
         batch_size, seq_len_audio, _, audio_dim = audio_feature.shape
@@ -23,20 +30,24 @@ class PairwiseCrossAttention(nn.Module):
         vision_feature = vision_feature.view(batch_size * seq_len_vision, -1, vision_dim)
 
         attended_values = self.cma(audio_feature, vision_feature, vision_feature)[0]
+        attended_values = self.layer_norm1(attended_values)
+        attended_values = self.FFN(attended_values)
+        attended_values = self.layer_norm2(attended_values)
+
         attended_values = attended_values.view(batch_size, seq_len_audio, -1, vision_dim)
 
         return attended_values
 
 
 class CMA_LSTM_Block(nn.Module):
-    def __init__(self, hidden_size=768, dropout=0.1):
+    def __init__(self, hidden_size, dropout):
         super(CMA_LSTM_Block, self).__init__()
         self.text_av_cma = nn.MultiheadAttention(embed_dim=hidden_size, num_heads=8, batch_first=True, dropout=dropout)
         self.layer_norm1 = nn.LayerNorm(hidden_size)
         self.FFN = nn.Sequential(
-            nn.Linear(hidden_size, 2048),
+            nn.Linear(hidden_size, hidden_size * 4),
             nn.ReLU(),
-            nn.Linear(2048, hidden_size)
+            nn.Linear(hidden_size * 4, hidden_size)
         )
         self.layer_norm2 = nn.LayerNorm(hidden_size)
 
@@ -48,7 +59,7 @@ class CMA_LSTM_Block(nn.Module):
 
 
 class CMA_LSTM(nn.Module):
-    def __init__(self, num_layers, hidden_size, dropout=0.1):
+    def __init__(self, num_layers, hidden_size, dropout):
         super(CMA_LSTM, self).__init__()
         self.num_layers = num_layers
         self.hidden_size = hidden_size
@@ -59,13 +70,15 @@ class CMA_LSTM(nn.Module):
     def forward(self, text_feats, av_feats):
         seq_len = av_feats.shape[1]
         hidden_feats = text_feats
+        all_hidden_feats = []
         for step in range(seq_len):
             av_frame_feat = av_feats[:, step, :, :]
             layer1_feat = self.text_av_cma(text_feats, av_frame_feat)
             layer2_feat = self.hidden_sa(layer1_feat, layer1_feat)
             hidden_feats = self.hidden_av_cma(hidden_feats, layer2_feat)
+            all_hidden_feats.append(hidden_feats)
+        hidden_feats = torch.cat(all_hidden_feats, dim=1)
         return hidden_feats
-
 
 class LSTM_AVQA_Model(nn.Module):
     def __init__(self, config):
@@ -92,7 +105,7 @@ class LSTM_AVQA_Model(nn.Module):
         self.set_if_finetune(self.clip_text_proj, config.model.finetune.clip_text_proj)
 
         self.hidden_size = 512
-        self.av_fusion = PairwiseCrossAttention(input_dim=self.hidden_size)
+        self.av_fusion = PairwiseCrossAttention(hidden_size=self.hidden_size)
         self.lstm_text_audio = CMA_LSTM(
             num_layers=self.config.model.lstm_layers,
             hidden_size=self.hidden_size,

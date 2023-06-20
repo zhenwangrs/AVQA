@@ -27,6 +27,7 @@ class MavqaDataset_online_test(Dataset):
                          'guzheng', 'saxophone', 'drum', 'violin', 'bagpipe', 'bassoon', 'acoustic_guitar', 'banjo',
                          'electric_bass', 'flute', 'trumpet', 'erhu', 'xylophone', 'tuba', 'suona']
         self.av2pt = AV2PT(config, image_processor)
+        self.selected_frame_index = [1, 3, 7, 13, 19, 25, 36, 42, 48, 54, 57, 60]
 
     def get_av_data(self, video_id):
         av_data = self.av_data[video_id]
@@ -35,6 +36,8 @@ class MavqaDataset_online_test(Dataset):
         # 每隔N帧采样一帧
         rand_range = 60 // self.config.model.select_num
         selected_frame_index = [self.start_frame + rand_range * i for i in range(self.config.model.select_num)]
+        if self.config.model.fix_select:
+            selected_frame_index = self.selected_frame_index
         audio_list = [os.path.join(self.config.dataset.av_data_path, audio_data[index - 1]) for index in selected_frame_index]
         frame_list = [os.path.join(self.config.dataset.av_data_path, frame_data[index - 1]) for index in selected_frame_index]
         return audio_list, frame_list
@@ -70,7 +73,7 @@ class MavqaDataset_online_test(Dataset):
         question_type = eval(qa_data['type'])
         question = qa_data['question_content']
         templ_values = eval(qa_data['templ_values'])
-        question = (self.compose_question(question, templ_values) + ' ') * 4
+        question = (self.compose_question(question, templ_values) + ' ') * 8
         answer = qa_data['anser']
         labels = self.ans_set.index(answer)
         return question_id, question, labels, question_type, \
@@ -79,7 +82,7 @@ class MavqaDataset_online_test(Dataset):
     def collate_fn(self, batch):
         question_ids, questions, labels, question_types, audio_feats, frame_feats = zip(*batch)
         question_ids = list(question_ids)
-        questions = self.tokenizer(questions, padding=True, truncation=True, return_tensors='pt', max_length=40)
+        questions = self.tokenizer(questions, padding=True, truncation=True, return_tensors='pt', max_length=77)
         text_input_ids = questions['input_ids']
         text_attention_mask = questions['attention_mask']
 

@@ -40,7 +40,9 @@ model:
   mask_t_prob: 0.7 # ratio of masking time
   mask_f_prob: 0.3 # ratio of masking frequency
   no_shift: False
+
   select_num: 10
+  fix_select: True
   answer_types: 42
   lstm_layers: 4
   dropout: 0.3
@@ -63,8 +65,8 @@ train:
   start_epoch: 1
   start_test_epoch: 8
   epochs: 30
-  test_freq: 4 # test how many epoch
-  save_freq: 4
+  test_freq: 2 # test how many epoch
+  save_freq: 2
   log_freq: 30 # log how many loss per epoch
   lr: 0.0001
 

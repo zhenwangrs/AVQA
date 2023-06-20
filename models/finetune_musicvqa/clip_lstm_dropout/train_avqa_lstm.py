@@ -32,7 +32,7 @@ def train():
 
     scaler = GradScaler()
 
-    optim = torch.optim.Adam(model.parameters(), lr=config.train.lr)
+    optim = torch.optim.NAdam(model.parameters(), lr=config.train.lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=optim, T_max=config.train.epochs)
 
     start_epoch = config.train.start_epoch
