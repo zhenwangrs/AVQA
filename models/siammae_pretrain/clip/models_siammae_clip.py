@@ -97,7 +97,6 @@ class SiamMAE(nn.Module):
         frame1_encoder_feat = self.image_mae_decoder_embed(frame1_encoder_feat)
         frame2_decoder_output = self.image_mae_for_pretraining(frame2_feats, frame1_encoder_feat, frame1_encoder_feat)
         frame2_decoder_feat = frame2_decoder_output.decoder_last_hidden_state
-        loss_frame2_recon = frame2_decoder_output.loss
         _, _, _, audio_decoder_last_hidden_state = self.audio_mae(audio_feat, frame2_decoder_feat, frame2_decoder_feat)
         return frame2_decoder_feat, audio_decoder_last_hidden_state
 

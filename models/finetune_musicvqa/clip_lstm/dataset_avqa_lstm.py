@@ -27,7 +27,7 @@ class MavqaDataset_online(Dataset):
                          'guzheng', 'saxophone', 'drum', 'violin', 'bagpipe', 'bassoon', 'acoustic_guitar', 'banjo',
                          'electric_bass', 'flute', 'trumpet', 'erhu', 'xylophone', 'tuba', 'suona']
         self.av2pt = AV2PT(config, image_processor)
-        self.selected_frame_index = [1, 3, 7, 13, 19, 25, 36, 42, 48, 54, 57, 60]
+        self.selected_frame_index = [1, 3, 7, 13, 19, 25, 30, 36, 42, 48, 54, 57, 60]
 
     def get_av_data(self, video_id):
         av_data = self.av_data[video_id]
