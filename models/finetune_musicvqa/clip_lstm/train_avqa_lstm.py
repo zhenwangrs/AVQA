@@ -80,7 +80,7 @@ def train():
                         f'epoch: {epoch}, batch: {index}, loss: {loss.item()}, epoch_loss: {epoch_loss / index}')
                 torch.cuda.empty_cache()
             logger.info(f'epoch loss: {epoch_loss / index}')
-            if epoch % config.train.save_freq == 0 and epoch >= config.train.start_test_epoch:
+            if epoch % config.train.save_freq == 0 and epoch >= config.train.start_save_epoch:
                 torch.save(model.state_dict(), f'./ckp/model_{epoch}.pth')
             if epoch % config.train.test_freq == 0 and epoch >= config.train.start_test_epoch:
                 test(model, config, split='test')
