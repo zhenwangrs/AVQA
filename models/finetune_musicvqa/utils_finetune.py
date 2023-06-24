@@ -30,6 +30,9 @@ class AV2PT(Dataset):
 
     def _wav2fbank(self, filename):
         waveform, sr = torchaudio.load(filename)
+        if waveform.shape[1] < 400:
+            print(f'padding {filename}')
+            waveform = torch.nn.functional.pad(waveform, (0, 400 - waveform.shape[1]))
         waveform = waveform - waveform.mean()
         # 498 128, 998, 128
         fbank = torchaudio.compliance.kaldi.fbank(
