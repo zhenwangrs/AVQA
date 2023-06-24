@@ -1,11 +1,7 @@
 dataset:
-  data_json_path: 'D:/dataset/data_pretrain/av_1fps.json'
-  data_dir: 'D:/dataset/data_pretrain/av_1fps/'
-
-  av_list_json_path: 'D:/dataset/data_pretrain/av_list.json'
   av_data_path: 'D:/dataset/data_pretrain/av_1fps'
-  original_pt_dir: 'D:/dataset/data_pretrain/av_pt'
-  finetune_pt_dir: 'D:/dataset/data_pretrain/av_finetune'
+  data_json_path: 'D:/dataset/data_pretrain/av_1fps.json'
+  av_list_json_path: 'D:/dataset/data_pretrain/av_list.json'
   finetune_mavqa_json_path: 'D:/dataset/data_pretrain/qa/avqa-{}.json'
 
   target_length: 96
@@ -21,7 +17,7 @@ dataset:
 model:
   model_name: 'mae_vit_base_patch16'
   audiomae_pretrained_pth_path: 'E:/Research/AVQA/lib/pretrained.pth'
-  pretrained_siammae_path: 'E:/Research/AVQA/models/siammae_pretrain/clip/ckp/model_1.pth'
+  pretrained_siammae_path: 'E:/Research/AVQA/models/siammae_pretrain/clip/ckp/model_1_clip.pth'
   
   mask_ratio: 0.9
   norm_pix_loss: False # Use (per-patch) normalized pixels as targets for computing loss
@@ -64,13 +60,14 @@ train:
   pin_memory: True
 
   training_mode: True
+  test_epoch: 30
+
   start_epoch: 1
   start_test_epoch: 12
-  test_freq: 2 # test how many epoch
   start_save_epoch: 6
+  test_freq: 2 # test how many epoch
   save_freq: 2
   epochs: 30
-  test_epoch: 30
   log_freq: 10 # log how many loss per epoch
   lr: 0.0001
 

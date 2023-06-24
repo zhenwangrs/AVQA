@@ -29,10 +29,11 @@ class PairwiseCrossAttention(nn.Module):
         audio_feature = audio_feature.view(batch_size * seq_len_audio, -1, audio_dim)
         vision_feature = vision_feature.view(batch_size * seq_len_vision, -1, vision_dim)
 
-        attended_values = self.cma(audio_feature, vision_feature, vision_feature)[0]
-        attended_values = self.layer_norm1(attended_values)
-        attended_values = self.FFN(attended_values)
-        attended_values = self.layer_norm2(attended_values)
+        # attended_values = self.cma(audio_feature, vision_feature, vision_feature)[0]
+        # attended_values = self.layer_norm1(attended_values)
+        # attended_values = self.FFN(attended_values)
+        # attended_values = self.layer_norm2(attended_values)
+        attended_values = torch.cat([audio_feature, vision_feature], dim=1)
 
         attended_values = attended_values.view(batch_size, seq_len_audio, -1, vision_dim)
         return attended_values
@@ -127,7 +128,7 @@ class LSTM_AVQA_Model(nn.Module):
             dropout=self.config.model.dropout
         )
         self.dropout = nn.Dropout(self.config.model.dropout)
-        self.classifier = nn.Linear(self.hidden_size * 3, 42)
+        self.classifier = nn.Linear(self.hidden_size * 3, self.config.model.answer_types)
 
         self.tokenizer = AutoTokenizer.from_pretrained("openai/clip-vit-base-patch16")
         self.image_processor = AutoImageProcessor.from_pretrained("facebook/vit-mae-base")
