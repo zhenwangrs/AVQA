@@ -52,11 +52,16 @@ class AVQADataset(Dataset):
         question_relation = qa_data['question_relation']
         question = qa_data['question_text']
         multi_choice = qa_data['multi_choice']
+        ans_index = qa_data['answer']
+        answer = multi_choice[ans_index]
+        # shuffle
+        if self.mode == 'train':
+            random.shuffle(multi_choice)
+        label = multi_choice.index(answer)
         # multi choice to 0. ans0; 1. ans1; 2. ans2; 3. ans3
         multi_choice = '; '.join([f'{i}. {ans}' for i, ans in enumerate(multi_choice)])
         question = f'Question: {question} [SEP] Answer Candidates: {multi_choice}'
-        labels = qa_data['answer']
-        return question_id, question, labels, question_type, audio_feats, frame_feats
+        return question_id, question, label, question_type, audio_feats, frame_feats
 
     def collate_fn(self, batch):
         question_ids, questions, labels, question_types, audio_feats, frame_feats = zip(*batch)
