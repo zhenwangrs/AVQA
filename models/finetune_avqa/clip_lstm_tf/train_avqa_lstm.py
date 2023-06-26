@@ -98,9 +98,9 @@ def test(model, config, split='test'):
     test_loader = DataLoader(test_dataset,
                              batch_size=config.train.batch_size,
                              shuffle=False,
-                             # num_workers=4,
-                             # prefetch_factor=2,
-                             # persistent_workers=False,
+                             num_workers=4,
+                             prefetch_factor=2,
+                             persistent_workers=False,
                              collate_fn=test_dataset.collate_fn,
                              drop_last=False)
 
