@@ -1,0 +1,118 @@
+import json
+import os
+import random
+
+import torch
+import munch
+import yaml
+from torch.utils.data import Dataset, DataLoader
+from tqdm import tqdm
+from transformers import AutoTokenizer, AutoImageProcessor
+from models.finetune_musicvqa.utils_finetune import AV2PT
+
+
+class AVQADataset(Dataset):
+    def __init__(self, config, tokenizer, image_processor, mode='train'):
+        self.config = config
+        self.tokenizer = tokenizer
+        self.image_processor = image_processor
+        self.mode = mode
+        self.qa_json_path = self.config.dataset.finetune_mavqa_json_path.format(mode)
+        self.qa_data = json.load(open(self.qa_json_path, 'r', encoding='utf-8'))
+        self.tf_qa_data = self.mc_qa_to_tf(self.qa_data)
+        self.av_data = json.load(open(self.config.dataset.av_list_json_path, 'r', encoding='utf-8'))
+        self.av2pt = AV2PT(config, image_processor)
+        self.selected_frame_index = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+    def get_av_data(self, video_id):
+        av_data = self.av_data[video_id]
+        audio_data = av_data['audio']
+        frame_data = av_data['frame']
+        # 每隔N帧采样一帧
+        rand_range = 60 // self.config.model.select_num
+        start_frame = random.randint(1, rand_range) if not self.config.model.fix_select else rand_range
+        selected_frame_index = [start_frame + rand_range * i for i in range(self.config.model.select_num)]
+        if self.config.model.fix_select:
+            selected_frame_index = self.selected_frame_index
+        audio_list = [os.path.join(self.config.dataset.av_data_path, audio_data[index-1]) for index in selected_frame_index]
+        frame_list = [os.path.join(self.config.dataset.av_data_path, frame_data[index-1]) for index in selected_frame_index]
+        return audio_list, frame_list
+
+    def mc_qa_to_tf(self, qa_data):
+        tf_qa_data = []
+        # 把多选题转换成判断题
+        for qa in tqdm(qa_data):
+            id = qa['id']
+            video_id = qa['video_id']
+            video_name = qa['video_name']
+            question_type = qa['question_type']
+            question_relation = qa['question_relation']
+            question = qa['question_text']
+            multi_choice = qa['multi_choice']
+            for index, choice in enumerate(multi_choice):
+                tf_qa_data.append({
+                    'id': id,
+                    'video_id': video_id,
+                    'video_name': video_name,
+                    'question_type': question_type,
+                    'question_relation': question_relation,
+                    'question_answer': f'{question} [SEP] {choice}',
+                    'answer_index': index,
+                    'answer': 1 if index == qa['answer'] else 0
+                })
+        return tf_qa_data
+
+    def __len__(self):
+        return len(self.tf_qa_data)
+
+    def __getitem__(self, item):
+        qa_data = self.tf_qa_data[item]
+        video_id = qa_data['video_id']
+        video_name = qa_data['video_name']
+        audio_list, frame_list = self.get_av_data(video_name)
+        audio_feats, frame_feats = self.av2pt.av_to_pt(audio_list, frame_list)
+
+        question_id = qa_data['id']
+        question_type = qa_data['question_type']
+        question_relation = qa_data['question_relation']
+        question = qa_data['question_answer']
+        answer_index = qa_data['answer_index']
+        label = qa_data['answer']
+        return question_id, question, label, answer_index, audio_feats, frame_feats
+
+    def collate_fn(self, batch):
+        question_ids, questions, labels, answer_index, audio_feats, frame_feats = zip(*batch)
+        question_ids = list(question_ids)
+        questions = self.tokenizer(questions, padding=True, truncation=True, return_tensors='pt', max_length=77)
+        text_input_ids = questions['input_ids']
+        text_attention_mask = questions['attention_mask']
+
+        labels = torch.tensor(labels)
+        answer_index = list(answer_index)
+
+        # audio feats [B, 10, 1, 128, 128] frame feats [B, 10, 3, 224, 224]
+        audio_feats = torch.stack(audio_feats, dim=0)
+        frame_feats = torch.stack(frame_feats, dim=0)
+        return text_input_ids, text_attention_mask, audio_feats, frame_feats, labels, answer_index, question_ids
+
+
+if __name__ == '__main__':
+    config = yaml.load(open('config.yaml', 'r', encoding='utf-8'), Loader=yaml.FullLoader)
+    config = munch.munchify(config)
+    tokenizer = AutoTokenizer.from_pretrained('roberta-base')
+    image_processor = AutoImageProcessor.from_pretrained("facebook/vit-mae-base")
+    mavqa_dataset = AVQADataset(config, tokenizer, image_processor, mode='train')
+    mavqa_dataloader = DataLoader(
+        mavqa_dataset,
+        batch_size=4,
+        shuffle=True,
+        # num_workers=4,
+        # prefetch_factor=2,
+        # persistent_workers=True,
+        # pin_memory=True,
+        drop_last=True,
+        collate_fn=mavqa_dataset.collate_fn,
+    )
+
+    for data in tqdm(mavqa_dataloader):
+        pass
