@@ -150,14 +150,15 @@ class LSTM_AVQA_Model(nn.Module):
         B, S, H = frame_feats.shape
         frame_feats = frame_feats.reshape(FB, FN, S, H)  # [4, 10, 197, 512]
 
-        text_feats = self.clip_text(input_ids=text_input_ids, attention_mask=text_attention_mask).last_hidden_state
+        attention_mask = None
+        text_feats = self.clip_text(input_ids=text_input_ids, attention_mask=attention_mask).last_hidden_state
         text_feats = self.clip_text_proj(text_feats)
 
-        text_audio_feats, all_ta_hidden_feats = self.lstm_text_audio(text_feats, audio_feats, text_attention_mask)
-        text_frame_feats, all_tf_hidden_feats = self.lstm_text_frame(text_feats, frame_feats, text_attention_mask)
+        text_audio_feats, all_ta_hidden_feats = self.lstm_text_audio(text_feats, audio_feats, attention_mask)
+        text_frame_feats, all_tf_hidden_feats = self.lstm_text_frame(text_feats, frame_feats, attention_mask)
 
         av_feats = self.av_fusion(all_tf_hidden_feats, all_ta_hidden_feats)
-        text_av_feats, _ = self.lstm_text_av(text_feats, av_feats, text_attention_mask)
+        text_av_feats, _ = self.lstm_text_av(text_feats, av_feats, attention_mask)
 
         text_feats = torch.cat([torch.mean(text_audio_feats, dim=1),
                                 torch.mean(text_av_feats, dim=1),
