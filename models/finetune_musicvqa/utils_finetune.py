@@ -6,6 +6,7 @@ import torch
 import torch.nn.functional
 from PIL import Image
 from torch.utils.data import Dataset
+import torchvision.transforms as transforms
 
 
 class AV2PT(Dataset):
@@ -67,7 +68,7 @@ class AV2PT(Dataset):
         # the output fbank shape is [time_frame_num, frequency_bins], e.g., [1024, 128]
         return fbank.unsqueeze(0).unsqueeze(0)
 
-    def av_to_pt(self, audio_files, frame_files):
+    def av_to_pt(self, audio_files, frame_files, random_augmentation=False):
         audio_feats = []
         for audio_file in audio_files:
             audio_feat = self.wav_to_fbank(audio_file)
@@ -76,5 +77,48 @@ class AV2PT(Dataset):
             audio_feats.append(audio_feat)
         audio_feats = torch.cat(audio_feats, dim=0)
         frame_feats = [Image.open(frame_file) for frame_file in frame_files]
+        if random_augmentation:
+            frame_feats = [self.random_augmentation(frame_feat) for frame_feat in frame_feats]
         frame_feats = self.image_processor(images=frame_feats, return_tensors="pt").pixel_values
         return audio_feats, frame_feats
+
+    def random_augmentation(self, image):
+        # 保存原图
+        # image.save('origin.jpg')
+        # 转换为Tensor
+        tensor_image = transforms.ToTensor()(image)
+
+        # 随机水平翻转
+        # if torch.rand(1) < 0.5:
+        #     tensor_image = transforms.functional.hflip(tensor_image)
+
+        # 随机垂直翻转
+        if torch.rand(1) < 0.5:
+            tensor_image = transforms.functional.vflip(tensor_image)
+        else:
+            # 随机旋转
+            angle = transforms.RandomRotation.get_params([-45, 45])
+            tensor_image = transforms.functional.rotate(tensor_image, angle)
+
+        if torch.rand(1) < 0.5:
+            # 随机调整亮度、对比度、饱和度和色调
+            brightness_factor = torch.rand(1).item() * 0.5 + 0.5  # (0.5, 1.0)
+            contrast_factor = torch.rand(1).item() * 0.5 + 0.5  # (0.5, 1.0)
+            saturation_factor = torch.rand(1).item() * 0.5 + 0.5  # (0.5, 1.0)
+            hue_factor = torch.rand(1).item() * 0.5 - 0.25  # (-0.25, 0.25)
+            tensor_image = transforms.functional.adjust_brightness(tensor_image, brightness_factor)
+            tensor_image = transforms.functional.adjust_contrast(tensor_image, contrast_factor)
+            tensor_image = transforms.functional.adjust_saturation(tensor_image, saturation_factor)
+            tensor_image = transforms.functional.adjust_hue(tensor_image, hue_factor)
+
+        if torch.rand(1) < 0.5:
+            # 随机裁剪
+            i, j, h, w = transforms.RandomCrop.get_params(tensor_image, output_size=(image.height, image.width))
+            tensor_image = transforms.functional.crop(tensor_image, i, j, h, w)
+
+        # 转换回PIL图像
+        augmented_image = transforms.ToPILImage()(tensor_image)
+        # 保存图像
+        # augmented_image.save('augmented_image.jpg')
+
+        return augmented_image
