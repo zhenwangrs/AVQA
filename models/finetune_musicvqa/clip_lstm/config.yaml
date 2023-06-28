@@ -63,13 +63,15 @@ train:
   test_epoch: 30
 
   start_epoch: 1
-  start_test_epoch: 12
+  start_test_epoch: 6
   start_save_epoch: 6
   test_freq: 2 # test how many epoch
   save_freq: 2
   epochs: 30
   log_freq: 10 # log how many loss per epoch
   lr: 0.0001
+
+  use_augment: True
 
 distributed:
   dist: True

@@ -2,12 +2,13 @@ import json
 import os
 import random
 
-import torch
 import munch
+import torch
 import yaml
 from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoImageProcessor
+
 from models.finetune_musicvqa.utils_finetune import AV2PT
 
 
@@ -69,7 +70,8 @@ class MavqaDataset_online(Dataset):
         qa_data = self.qa_data[item]
         video_id = qa_data['video_id']
         audio_list, frame_list = self.get_av_data(video_id)
-        audio_feats, frame_feats = self.av2pt.av_to_pt(audio_list, frame_list)
+        use_augment = True if self.mode == 'train' and self.config.train.use_augment else False
+        audio_feats, frame_feats = self.av2pt.av_to_pt(audio_list, frame_list, random_augmentation=use_augment)
 
         question_id = qa_data['question_id']
         question_type = eval(qa_data['type'])
@@ -78,8 +80,7 @@ class MavqaDataset_online(Dataset):
         question = (self.compose_question(question, templ_values) + ' ') * 8
         answer = qa_data['anser']
         labels = self.ans_set.index(answer)
-        return question_id, question, labels, question_type, \
-            audio_feats, frame_feats
+        return question_id, question, labels, question_type, audio_feats, frame_feats
 
     def collate_fn(self, batch):
         question_ids, questions, labels, question_types, audio_feats, frame_feats = zip(*batch)

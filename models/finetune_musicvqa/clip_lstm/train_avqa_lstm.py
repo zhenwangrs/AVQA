@@ -49,7 +49,7 @@ def train():
                                   shuffle=True,
                                   num_workers=6,
                                   prefetch_factor=2,
-                                  persistent_workers=True,
+                                  persistent_workers=False,
                                   pin_memory=True,
                                   collate_fn=train_dataset.collate_fn,
                                   drop_last=False)
@@ -98,11 +98,12 @@ def test(model, config, split='test'):
 
     test_dataset = MavqaDataset_online(config, model.tokenizer, model.image_processor, split)
     test_loader = DataLoader(test_dataset,
-                             batch_size=50,
+                             batch_size=config.train.batch_size,
                              shuffle=False,
-                             num_workers=4,
+                             num_workers=6,
                              prefetch_factor=2,
                              persistent_workers=False,
+                             pin_memory=True,
                              collate_fn=test_dataset.collate_fn,
                              drop_last=False)
 
