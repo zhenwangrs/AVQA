@@ -55,7 +55,7 @@ class AVQADataset(Dataset):
         ans_index = qa_data['answer']
         answer = multi_choice[ans_index]
         # shuffle
-        if self.mode == 'train':
+        if self.mode == 'train' and random.random() < 0.2:
             random.shuffle(multi_choice)
         label = multi_choice.index(answer)
         # multi choice to 0. ans0; 1. ans1; 2. ans2; 3. ans3
@@ -87,12 +87,12 @@ if __name__ == '__main__':
     mavqa_dataset = AVQADataset(config, tokenizer, image_processor, mode='train')
     mavqa_dataloader = DataLoader(
         mavqa_dataset,
-        batch_size=32,
+        batch_size=4,
         shuffle=True,
-        num_workers=4,
-        prefetch_factor=2,
-        persistent_workers=True,
-        pin_memory=True,
+        # num_workers=4,
+        # prefetch_factor=2,
+        # persistent_workers=True,
+        # pin_memory=True,
         drop_last=True,
         collate_fn=mavqa_dataset.collate_fn,
     )

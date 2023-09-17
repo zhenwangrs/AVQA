@@ -969,6 +969,57 @@ class ViTMAEForPreTraining(ViTMAEPreTrainedModel):
             var = target.var(dim=-1, keepdim=True)
             target = (target - mean) / (var + 1.0e-6) ** 0.5
 
+        '''
+        # 转换成图片
+        import matplotlib.pyplot as plt
+        orig_pixels = self.patchify(pixel_values)
+        tmp = orig_pixels[mask==0]
+        pred[mask==0] = tmp
+        all_black = torch.zeros(pred.shape, device=pred.device, dtype=torch.float16)
+        all_black[mask==0] = tmp
+
+        pred = self.unpatchify(pred)
+        all_black = self.unpatchify(all_black)
+        for i in range(pred.shape[0]):
+            m = mask[i]
+            # 取出mask所在的patch
+            fig = plt.figure()
+            fig.subplots_adjust(wspace=0.01, hspace=0.01)
+            plt.axis('off')
+
+            black = all_black[i].detach().cpu().numpy()
+            black = black - black.min()
+            black = black / black.max()
+            black = black * 255
+            black = black.astype(np.uint8)
+            black = np.transpose(black, (1, 2, 0))
+            ax1 = plt.subplot(1, 3, 1)
+            ax1.axis('off')
+            plt.imshow(black)
+
+            data = pred[i].detach().cpu().numpy()
+            data = data - data.min()
+            data = data / data.max()
+            data = data * 255
+            data = data.astype(np.uint8)
+            data = np.transpose(data, (1, 2, 0))
+            ax2 = plt.subplot(1, 3, 2)
+            ax2.axis('off')
+            plt.imshow(data)
+
+            orig = pixel_values[i].detach().cpu().numpy()
+            orig = orig - orig.min()
+            orig = orig / orig.max()
+            orig = orig * 255
+            orig = orig.astype(np.uint8)
+            orig = np.transpose(orig, (1, 2, 0))
+            ax3 = plt.subplot(1,3,3)
+            ax3.axis('off')
+            plt.imshow(orig)
+
+            plt.savefig(f"E:\Research\AVQA\paper\plot_{i}.png", bbox_inches='tight')
+            # plt.show(tight_layout=True)
+        '''
         loss = (pred - target) ** 2
         loss = loss.mean(dim=-1)  # [N, L], mean loss per patch
 

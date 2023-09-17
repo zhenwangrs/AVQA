@@ -71,7 +71,7 @@ class MavqaDataset_online(Dataset):
         video_id = qa_data['video_id']
         audio_list, frame_list = self.get_av_data(video_id)
         use_augment = True if self.mode == 'train' and self.config.train.use_augment else False
-        audio_feats, frame_feats = self.av2pt.av_to_pt(audio_list, frame_list, random_augmentation=use_augment)
+        audio_feats, frame_feats = self.av2pt.av_to_pt(audio_list, frame_list, use_augment=use_augment)
 
         question_id = qa_data['question_id']
         question_type = eval(qa_data['type'])
@@ -106,13 +106,13 @@ if __name__ == '__main__':
     mavqa_dataset = MavqaDataset_online(config, tokenizer, image_processor, mode='train')
     mavqa_dataloader = DataLoader(
         mavqa_dataset,
-        batch_size=4,
+        batch_size=32,
         shuffle=True,
-        # num_workers=4,
+        # num_workers=1,
         # prefetch_factor=2,
-        # persistent_workers=True,
+        # persistent_workers=False,
         # pin_memory=True,
-        drop_last=True,
+        drop_last=False,
         collate_fn=mavqa_dataset.collate_fn,
     )
 

@@ -1,10 +1,8 @@
 import sys
 
-import open_clip
-from open_clip.tokenizer import tokenize
 import torch
 import torch.nn as nn
-from transformers import RobertaModel, AutoImageProcessor, RobertaTokenizer, CLIPTextModel, AutoTokenizer, CLIPModel
+from transformers import AutoImageProcessor, AutoTokenizer
 
 sys.path.append('../../siammae_pretrain')
 from models.siammae_pretrain.clip.models_siammae_clip import SiamMAE
@@ -68,21 +66,23 @@ class CMA_LSTM(nn.Module):
         self.hidden_av_cma = CMA_LSTM_Block(hidden_size, dropout)
         self.text_av_last_cma = CMA_LSTM_Block(hidden_size, dropout)
 
-    def forward(self, text_feats, av_feats):
+    def forward(self, text_feats, av_feats, attn_mask=None):
         seq_len = av_feats.shape[1]
         all_hidden_feats = []
         all_tav_hidden_feats = []
         hidden_feats = text_feats
         for step in range(seq_len):
             av_frame_feat = av_feats[:, step, :, :]
-            layer1_feat = self.text_av_cma(text_feats, av_frame_feat)
-            layer2_feat = self.hidden_sa(layer1_feat, layer1_feat)
-            hidden_feats = self.hidden_av_cma(hidden_feats, layer2_feat)
+            layer1_feat = self.text_av_cma(text_feats, av_frame_feat, attn_mask)
+            layer2_feat = self.hidden_sa(layer1_feat, layer1_feat, attn_mask)
+            hidden_feats = self.hidden_av_cma(hidden_feats, layer2_feat, attn_mask)
             all_hidden_feats.append(hidden_feats)
             all_tav_hidden_feats.append(layer2_feat)
         hidden_feats = torch.cat(all_hidden_feats, dim=1)
-        hidden_feats = self.text_av_last_cma(text_feats, hidden_feats)
+        hidden_feats = self.text_av_last_cma(text_feats, hidden_feats, attn_mask)
+
         all_tav_hidden_feats = torch.stack(all_tav_hidden_feats, dim=1)
+
         return hidden_feats, all_tav_hidden_feats
 
 
@@ -153,13 +153,11 @@ class LSTM_AVQA_Model(nn.Module):
         text_feats = self.clip_text(input_ids=text_input_ids, attention_mask=text_attention_mask).last_hidden_state
         text_feats = self.clip_text_proj(text_feats)
 
-        text_audio_feats, all_ta_hidden_feats = self.lstm_text_audio(text_feats, audio_feats)
-        text_frame_feats, all_tf_hidden_feats = self.lstm_text_frame(text_feats, frame_feats)
+        text_audio_feats, all_ta_hidden_feats = self.lstm_text_audio(text_feats, audio_feats, text_attention_mask)
+        text_frame_feats, all_tf_hidden_feats = self.lstm_text_frame(text_feats, frame_feats, text_attention_mask)
 
-        # av_feats = self.av_fusion(audio_feats, frame_feats)
-        # av_feats = self.av_fusion(frame_feats, audio_feats)
         av_feats = self.av_fusion(all_tf_hidden_feats, all_ta_hidden_feats)
-        text_av_feats, _ = self.lstm_text_av(text_feats, av_feats)
+        text_av_feats, _ = self.lstm_text_av(text_feats, av_feats, text_attention_mask)
 
         text_feats = torch.cat([torch.mean(text_audio_feats, dim=1),
                                 torch.mean(text_av_feats, dim=1),

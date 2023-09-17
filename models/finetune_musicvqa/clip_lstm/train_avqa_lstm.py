@@ -32,7 +32,13 @@ def train():
 
     scaler = GradScaler()
 
+    # param_groups = [
+    #     {'params': model.parameters(), 'lr': config.train.lr},
+    #     {'params': model.image_mae_proj.parameters(), 'lr': config.train.lr / 10},
+    # ]
+    # optim = torch.optim.NAdam(param_groups)
     optim = torch.optim.NAdam(model.parameters(), lr=config.train.lr)
+
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=optim, T_max=config.train.epochs)
 
     start_epoch = config.train.start_epoch
@@ -83,7 +89,7 @@ def train():
             if epoch % config.train.save_freq == 0 and epoch >= config.train.start_save_epoch:
                 torch.save(model.state_dict(), f'./ckp/model_{epoch}.pth')
             if epoch % config.train.test_freq == 0 and epoch >= config.train.start_test_epoch:
-                test(model, config, split='test')
+                test(model, config, split='val')
 
             scheduler.step()
 
@@ -100,10 +106,10 @@ def test(model, config, split='test'):
     test_loader = DataLoader(test_dataset,
                              batch_size=config.train.batch_size,
                              shuffle=False,
-                             num_workers=6,
-                             prefetch_factor=2,
-                             persistent_workers=False,
-                             pin_memory=True,
+                             # num_workers=6,
+                             # prefetch_factor=2,
+                             # persistent_workers=False,
+                             # pin_memory=True,
                              collate_fn=test_dataset.collate_fn,
                              drop_last=False)
 
@@ -134,11 +140,40 @@ def test(model, config, split='test'):
 
     # 计算准确率
     total_correct = 0
+    audio_correct = 0
+    audio_q_num = 0
+    visual_correct = 0
+    visual_q_num = 0
+    av_correct = 0
+    av_q_num = 0
     for qid, record in answer_record.items():
         if record['correct_ans_index'] == np.argmax(record['pred_ans_score']):
             total_correct += 1
+            is_correct = True
+        else:
+            is_correct = False
+
+        if 'Audio' in record['question_type']:
+            audio_q_num += 1
+            if is_correct:
+                audio_correct += 1
+        elif 'Visual' in record['question_type']:
+            visual_q_num += 1
+            if is_correct:
+                visual_correct += 1
+        elif 'Audio-Visual' in record['question_type']:
+            av_q_num += 1
+            if is_correct:
+                av_correct += 1
+
     logger.info(
         f'{split} total correct: {total_correct}, total: {len(answer_record)}, acc: {total_correct / len(answer_record)}')
+    logger.info(
+        f'{split} audio_correct: {audio_correct}, total: {len(answer_record)}, acc: {audio_correct / audio_q_num}')
+    logger.info(
+        f'{split} visual_correct: {visual_correct}, total: {len(answer_record)}, acc: {visual_correct / visual_q_num}')
+    logger.info(
+        f'{split} av_correct: {av_correct}, total: {len(answer_record)}, acc: {av_correct / av_q_num}')
     model.train()
 
 
@@ -147,9 +182,9 @@ def test_all(model, config, split='test'):
     answer_record = {}
     test_dataset = MavqaDataset_online_test(config, model.tokenizer, model.image_processor, split)
     test_loader = DataLoader(test_dataset,
-                             batch_size=50,
+                             batch_size=config.train.batch_size,
                              shuffle=False,
-                             num_workers=4,
+                             num_workers=6,
                              prefetch_factor=2,
                              persistent_workers=True,
                              collate_fn=test_dataset.collate_fn,

@@ -39,17 +39,19 @@ class SiamMAE(nn.Module):
             mask_f_prob=config.model.mask_f_prob,
             no_shift=config.model.no_shift,
         )
+        hidden_size = 768
         self.audio_mae = load_encoder_from_pretained_audiomae(self.audio_mae, config.model.audiomae_pretrained_pth_path)
         self.audio_mae = load_decoder_from_pretrained_vitmae(self.audio_mae)
-        self.audio_mae_proj = nn.Linear(768, 512)
+        self.audio_mae_proj = nn.Linear(768, hidden_size)
 
         self.image_processor = AutoImageProcessor.from_pretrained("facebook/vit-mae-base")
         self.image_mae_for_pretraining = ViTMAEForPreTraining.from_pretrained("facebook/vit-mae-base")
         self.image_mae_encoder = self.image_mae_for_pretraining.vit
         self.image_mae_decoder_embed = self.image_mae_for_pretraining.decoder.decoder_embed
-        self.image_mae_proj = nn.Linear(768, 512)
+        self.image_mae_proj = nn.Linear(768, hidden_size)
 
-        self.clip = CLIPModel.from_pretrained("openai/clip-vit-base-patch16")
+        used_clip = "openai/clip-vit-large-patch14"
+        self.clip = CLIPModel.from_pretrained(used_clip)
         self.clip_visual = self.clip.vision_model
         self.clip_visual_proj = self.clip.visual_projection
         self.clip_text_proj = self.clip.text_projection
@@ -58,7 +60,8 @@ class SiamMAE(nn.Module):
             param.requires_grad = False
 
         self.clip_loss_fn = ClipLoss()
-        self.clip_image_processor = AutoProcessor.from_pretrained("openai/clip-vit-base-patch16")
+        # self.clip_image_processor = AutoProcessor.from_pretrained("openai/clip-vit-base-patch16")
+        self.clip_image_processor = AutoProcessor.from_pretrained(used_clip)
         self.logit_scale = torch.nn.Parameter(torch.tensor(2.6592), requires_grad=True)
 
     def forward(self, audio_feats, frame1_feats, frame2_feats, frame1_clip_feats):
@@ -88,6 +91,11 @@ class SiamMAE(nn.Module):
         audio_encoder_feat_mean = torch.mean(audio_no_mask_feats, dim=1)
         audio_encoder_feat_mean = audio_encoder_feat_mean / audio_encoder_feat_mean.norm(dim=-1, keepdim=True)
         clip_loss_audio = self.clip_loss_fn(audio_encoder_feat_mean, frame1_clip_feats_mean, self.logit_scale.exp())
+
+        # loss_frame2_recon = torch.tensor(0.0).cuda()
+        # loss_audio_recon = torch.tensor(0.0).cuda()
+        # clip_loss_frame = torch.tensor(0.0).cuda()
+        # clip_loss_audio = torch.tensor(0.0).cuda()
 
         total_loss = loss_frame2_recon + loss_audio_recon + clip_loss_frame + clip_loss_audio
         return total_loss, loss_frame2_recon, loss_audio_recon, clip_loss_frame, clip_loss_audio

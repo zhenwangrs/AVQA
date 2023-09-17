@@ -200,11 +200,11 @@ class MaskedAutoencoderViT(nn.Module):
         specs: (N, 1, H, W)
         """
         p = self.patch_embed.patch_size[0]
-        h = 1024 // p
+        h = 96 // p
         w = 128 // p
-        x = x.reshape(shape=(x.shape[0], h, w, p, p, 1))
+        x = x.reshape((x.shape[0], h, w, p, p, 1))
         x = torch.einsum('nhwpqc->nchpwq', x)
-        specs = x.reshape(shape=(x.shape[0], 1, h * p, w * p))
+        specs = x.reshape((x.shape[0], 1, h * p, w * p))
         return specs
 
     def random_masking(self, x, mask_ratio):
@@ -396,6 +396,46 @@ class MaskedAutoencoderViT(nn.Module):
             v = emb_enc
         pred, decoder_last_hidden_state, _ = self.forward_decoder(emb_enc, k, v, ids_restore)  # [N, L, p*p*3]
         loss_recon = self.forward_loss(imgs, pred, mask, norm_pix_loss=self.norm_pix_loss)
+
+        # 保存为图片
+        # import matplotlib.pyplot as plt
+        # import numpy as np
+        # import os
+        # import cv2
+        # pred = self.unpatchify(pred)
+        # pred = pred.detach().cpu().numpy()
+        # pred = np.transpose(pred, (2, 3, 1, 0))
+        # # min-max
+        # pred = pred - pred.min()
+        # pred = pred / pred.max()
+        # pred = pred * 255
+        # pred = pred.astype(np.uint8)
+        #
+        # imgs = self.unpatchify(imgs)
+        # imgs = imgs.detach().cpu().numpy()
+        # imgs = np.transpose(imgs, (2, 3, 1, 0))
+        # # min-max
+        # imgs = imgs - imgs.min()
+        # imgs = imgs / imgs.max()
+        # imgs = imgs * 255
+        # imgs = imgs.astype(np.uint8)
+        #
+        # for i in range(pred.shape[-1]):
+        #     data = pred[:, :, :, i]
+        #     img_data = imgs[:, :, :, i]
+        #     # cv2.imwrite(os.path.join('pred', str(i) + '.png'), data)
+        #     # cv2.imshow('Array Image', data)
+        #
+        #     img_data = np.transpose(img_data, (2, 1, 0))[0]
+        #     # plt.savefig('orig.png')
+        #     plt.imshow(img_data, cmap='YlGnBu_r')
+        #     plt.show()
+        #
+        #     data = np.transpose(data, (2, 1, 0))[0]
+        #     # plt.savefig('pred.png')
+        #     plt.imshow(data, cmap='YlGnBu_r')
+        #     plt.show()
+
         loss_contrastive = torch.FloatTensor([0.0]).cuda()
         return loss_recon, pred, emb_enc, decoder_last_hidden_state
 
@@ -432,8 +472,18 @@ def mae_vit_huge_patch14_dec512d8b(**kwargs):
     return model
 
 
+def mae_vit_base_patch8_dec512d8b(**kwargs):
+    model = MaskedAutoencoderViT(
+        patch_size=8, embed_dim=768, depth=12, num_heads=12,
+        decoder_embed_dim=512, decoder_num_heads=16,
+        mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
+    return model
+
+
 # set recommended archs
 mae_vit_base_patch16 = mae_vit_base_patch16_dec512d8b  # decoder: 512 dim, 8 blocks
 mae_vit_large_patch16 = mae_vit_large_patch16_dec512d8b  # decoder: 512 dim, 8 blocks
 mae_vit_huge_patch14 = mae_vit_huge_patch14_dec512d8b  # decoder: 512 dim, 8 blocks
 mae_vit_small_patch16 = mae_vit_small_patch16_dec512d8b  # decoder: 512 dim, 8 blocks
+
+mae_vit_base_patch8 = mae_vit_base_patch8_dec512d8b  # decoder: 512 dim, 8 blocks

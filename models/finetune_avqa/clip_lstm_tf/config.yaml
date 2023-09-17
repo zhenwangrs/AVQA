@@ -59,11 +59,11 @@ train:
   num_workers: 4
   pin_memory: True
 
-  training_mode: False
-  test_epoch: 0
+  training_mode: True
+  test_epoch: 10
 
   start_epoch: 1
-  start_test_epoch: 1
+  start_test_epoch: 2
   start_save_epoch: 1
   test_freq: 1 # test how many epoch
   save_freq: 1

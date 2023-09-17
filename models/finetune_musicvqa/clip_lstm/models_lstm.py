@@ -1,6 +1,7 @@
 import sys
 
 import open_clip
+from matplotlib import pyplot as plt
 from open_clip.tokenizer import tokenize
 import torch
 import torch.nn as nn
@@ -110,7 +111,7 @@ class LSTM_AVQA_Model(nn.Module):
         self.clip_text_proj = model.clip_text_proj
         self.set_if_finetune(self.clip_text_proj, config.model.finetune.clip_text_proj)
 
-        self.hidden_size = 512
+        self.hidden_size = 768
         self.av_fusion = PairwiseCrossAttention(hidden_size=self.hidden_size)
         self.lstm_text_audio = CMA_LSTM(
             num_layers=self.config.model.lstm_layers,
@@ -130,7 +131,8 @@ class LSTM_AVQA_Model(nn.Module):
         self.dropout = nn.Dropout(self.config.model.dropout)
         self.classifier = nn.Linear(self.hidden_size * 3, self.config.model.answer_types)
 
-        self.tokenizer = AutoTokenizer.from_pretrained("openai/clip-vit-base-patch16")
+        # self.tokenizer = AutoTokenizer.from_pretrained("openai/clip-vit-base-patch16")
+        self.tokenizer = AutoTokenizer.from_pretrained("openai/clip-vit-large-patch14")
         self.image_processor = AutoImageProcessor.from_pretrained("facebook/vit-mae-base")
         self.loss_fn = nn.CrossEntropyLoss()
 
@@ -144,6 +146,7 @@ class LSTM_AVQA_Model(nn.Module):
         audio_feats = self.audio_mae_proj(audio_feats)  # [40, 65, 512]
         B, S, H = audio_feats.shape
         audio_feats = audio_feats.reshape(AB, AN, S, H)  # [4, 10, 65, 512]
+
 
         frame_feats = self.image_mae(frame_feats, apply_mask=False).last_hidden_state  # [40, 197, 768]
         frame_feats = self.image_mae_proj(frame_feats)  # [40, 197, 512]
@@ -164,6 +167,7 @@ class LSTM_AVQA_Model(nn.Module):
         text_feats = torch.cat([torch.mean(text_audio_feats, dim=1),
                                 torch.mean(text_av_feats, dim=1),
                                 torch.mean(text_frame_feats, dim=1)], dim=1)
+        text_feats = text_feats / torch.norm(text_feats, dim=1, keepdim=True)
         text_feats = self.dropout(text_feats)
         logits = self.classifier(text_feats)
         loss = self.loss_fn(logits, labels)

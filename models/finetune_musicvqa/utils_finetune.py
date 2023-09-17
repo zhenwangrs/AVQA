@@ -72,7 +72,7 @@ class AV2PT(Dataset):
         audio_feats = []
         for audio_file in audio_files:
             audio_feat = self.wav_to_fbank(audio_file)
-            if self.roll_mag_aug:
+            if random_augmentation and self.roll_mag_aug:
                 audio_feat = self._roll_mag_aug(audio_feat)
             audio_feats.append(audio_feat)
         audio_feats = torch.cat(audio_feats, dim=0)
@@ -92,15 +92,15 @@ class AV2PT(Dataset):
         # if torch.rand(1) < 0.5:
         #     tensor_image = transforms.functional.hflip(tensor_image)
 
+        prob = torch.rand(1)
         # 随机垂直翻转
-        if torch.rand(1) < 0.5:
+        if prob < 0.2:
             tensor_image = transforms.functional.vflip(tensor_image)
-        else:
+        elif prob < 0.4:
             # 随机旋转
             angle = transforms.RandomRotation.get_params([-45, 45])
             tensor_image = transforms.functional.rotate(tensor_image, angle)
-
-        if torch.rand(1) < 0.5:
+        elif prob < 0.5:
             # 随机调整亮度、对比度、饱和度和色调
             brightness_factor = torch.rand(1).item() * 0.5 + 0.5  # (0.5, 1.0)
             contrast_factor = torch.rand(1).item() * 0.5 + 0.5  # (0.5, 1.0)
@@ -110,8 +110,7 @@ class AV2PT(Dataset):
             tensor_image = transforms.functional.adjust_contrast(tensor_image, contrast_factor)
             tensor_image = transforms.functional.adjust_saturation(tensor_image, saturation_factor)
             tensor_image = transforms.functional.adjust_hue(tensor_image, hue_factor)
-
-        if torch.rand(1) < 0.5:
+        elif prob < 0.6:
             # 随机裁剪
             i, j, h, w = transforms.RandomCrop.get_params(tensor_image, output_size=(image.height, image.width))
             tensor_image = transforms.functional.crop(tensor_image, i, j, h, w)

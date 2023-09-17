@@ -17,7 +17,7 @@ dataset:
 model:
   model_name: 'mae_vit_base_patch16'
   audiomae_pretrained_pth_path: 'E:/Research/AVQA/lib/pretrained.pth'
-  pretrained_siammae_path: 'E:/Research/AVQA/models/siammae_pretrain/clip/ckp/model_1_clip.pth'
+  pretrained_siammae_path: 'E:/Research/AVQA/models/siammae_pretrain/clip/ckp/model_1_avqa.pth'
   
   mask_ratio: 0.9
   norm_pix_loss: False # Use (per-patch) normalized pixels as targets for computing loss

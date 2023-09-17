@@ -79,7 +79,11 @@ class MusicavqaDataset(Dataset):
 
     def _wav2fbank(self, filename):
         waveform, sr = torchaudio.load(filename)
+        if waveform.shape[1] < 400:
+            waveform = torch.nn.functional.pad(waveform, (0, 400 - waveform.shape[1]))
         waveform = waveform - waveform.mean()
+        if self.config.dataset.roll_mag_aug:
+            waveform = self._roll_mag_aug(waveform)
         # 128 128, 498 128, 998, 128
         fbank = torchaudio.compliance.kaldi.fbank(
             waveform, htk_compat=True, sample_frequency=sr, use_energy=False,

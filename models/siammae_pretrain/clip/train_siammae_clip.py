@@ -15,6 +15,7 @@ from models_siammae_clip import SiamMAE
 
 def train(config):
     model = SiamMAE(config)
+    torch.save(model.state_dict(), './ckp/model_0.pth')
     if config.train.start_epoch > 1:
         model.load_state_dict(torch.load(f'./ckp/model_{config.train.start_epoch-1}.pth'))
     model = model.cuda()
@@ -24,16 +25,16 @@ def train(config):
         dataset,
         batch_size=config.train.batch_size,
         shuffle=True,
-        num_workers=6,
-        prefetch_factor=2,
-        pin_memory=True,
-        persistent_workers=True,
+        # num_workers=6,
+        # prefetch_factor=2,
+        # pin_memory=True,
+        # persistent_workers=True,
         drop_last=False,
         collate_fn=dataset.collate_fn
     )
 
-    optim = torch.optim.Adam(model.parameters(), lr=config.train.lr)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=optim, T_max=config.train.epochs)
+    optim = torch.optim.AdamW(model.parameters(), lr=config.train.lr)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=optim, T_max=10)
     scaler = GradScaler()
     for epoch in range(config.train.start_epoch, config.train.epochs + 1):
         epoch_loss = 0
@@ -62,7 +63,18 @@ def train(config):
                             f'audio recon loss: {loss_audio_recon.item()}, '
                             f'clip loss frame: {clip_loss_frame.item()}, '
                             f'clip loss audio: {clip_loss_audio.item()}')
-        scheduler.step()
+            # 训练到一半时，保存
+            # if index == len(pretrain_dataloader) // 10:
+            #     torch.save(model.state_dict(), f'./ckp/model_{epoch}_ten.pth')
+            # 训练到一半时，保存
+            # if index == len(pretrain_dataloader) // 2:
+            #     torch.save(model.state_dict(), f'./ckp/model_{epoch}_half.pth')
+
+            # 每过10分之一，sheduler.step()
+            # if index % (len(pretrain_dataloader) // 10) == 0:
+            #     # scheduler.step()
+            #     torch.save(model.state_dict(), f'./ckp/model_{epoch}_{index}.pth')
+
         logger.info(f'epoch: {epoch}, epoch_loss: {epoch_loss / len(pretrain_dataloader)}')
         if epoch % config.train.save_freq == 0:
             torch.save(model.state_dict(), f'./ckp/model_{epoch}.pth')

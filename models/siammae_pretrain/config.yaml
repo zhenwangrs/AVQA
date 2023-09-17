@@ -7,7 +7,7 @@ dataset:
 #  finetune_pt_dir: 'F:/Research/AVQA/music_avqa/data_finetune'
   finetune_mavqa_json_path: 'D:/dataset/data_pretrain/qa/avqa-{}.json'
 
-  target_length: 128
+  target_length: 96
   num_mel_bins: 128
   use_fbank: False
   fbank_dir: ''

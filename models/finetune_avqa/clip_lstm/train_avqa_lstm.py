@@ -96,7 +96,7 @@ def test(model, config, split='test'):
 
     test_dataset = AVQADataset(config, model.tokenizer, model.image_processor, split)
     test_loader = DataLoader(test_dataset,
-                             batch_size=64,
+                             batch_size=config.train.batch_size,
                              shuffle=False,
                              num_workers=4,
                              prefetch_factor=2,
@@ -125,7 +125,7 @@ def test(model, config, split='test'):
                         'correct_ans_index': label,
                         'question_type': q_type,
                     }
-                    print(f'qid: {qid}, pred_ans_index: {np.argmax(pred_score)}, correct_ans_index: {label}')
+                    # print(f'qid: {qid}, pred_ans_index: {np.argmax(pred_score)}, correct_ans_index: {label}')
                 else:
                     raise ValueError(f'qid: {qid} has already in answer_record')
 

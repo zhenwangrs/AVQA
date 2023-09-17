@@ -1,5 +1,5 @@
 dataset:
-  av_data_path: 'D:/dataset/data_pretrain/av_1fps'
+  av_data_path: 'D:/dataset/pretrain_data/av_1fps_mvqa'
   data_json_path: 'D:/dataset/data_pretrain/av_1fps.json'
   av_list_json_path: 'D:/dataset/data_pretrain/av_list.json'
   finetune_mavqa_json_path: 'D:/dataset/data_pretrain/qa/avqa-{}.json'
@@ -17,7 +17,7 @@ dataset:
 model:
   model_name: 'mae_vit_base_patch16'
   audiomae_pretrained_pth_path: 'E:/Research/AVQA/lib/pretrained.pth'
-  pretrained_siammae_path: 'E:/Research/AVQA/models/siammae_pretrain/clip/ckp/model_1_clip.pth'
+  pretrained_siammae_path: 'E:/Research/AVQA/models/siammae_pretrain/clip/ckp/model_1_mvqa_half.pth'
   
   mask_ratio: 0.9
   norm_pix_loss: False # Use (per-patch) normalized pixels as targets for computing loss
@@ -71,7 +71,7 @@ train:
   log_freq: 10 # log how many loss per epoch
   lr: 0.0001
 
-  use_augment: True
+  use_augment: False
 
 distributed:
   dist: True
