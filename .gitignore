@@ -11,3 +11,7 @@
 *.pyc
 *.csv
 *.json
+/models/finetune_musicvqa/clip_lstm_noaug_hidden_on_text/
+/models/finetune_musicvqa/clip_lstm_nofreeze/
+/paper/
+/models/finetune_musicvqa/clip_lstm_4s/
